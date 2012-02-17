@@ -6,7 +6,7 @@ function [  ] = main( INSfile, loss_freq, loss_period )
 % Do a 'clear all' first or sometimes you will get an error
 clearvars -except INSfile loss_freq loss_period 
 global a v r rpy Cn2b ba bg dr dv fs fsc ws wsc epsilon WASPloc timestamps_IMU...
- timestamps_WASP nS nS_filter front Sk innov signal_loss_errors...
+ timestamps_WASP nS nS_filter front Sk innov actual_ba actual_bg signal_loss_errors...
  ms mn_cal gn_cal Pk
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -91,9 +91,9 @@ dt_filter = (timestamps_WASP(end)- timestamps_WASP(1))/(nS_filter-1);
 [a, v, r, rpy] = deal(zeros(3,nS+1)); % INS output
 [Cn2b] = deal(zeros(3,3,nS+1)); % INS orientation matrix
 [wsc, fsc, fsoc] = deal(zeros(3,nS)); % Bias corrected gyro and accel in s-frame
-[ba, bg, epsilon, dv, dr] = deal(zeros(3,nS+1)); % filter error estimates
-[innov, Sk] = deal(zeros(9,nS+1));       % filter residuals + std dev
-[Pk] = deal(zeros(15,nS+1));             % filter std dev
+[ba, bg, epsilon, dv, dr, actual_ba, actual_bg] = deal(zeros(3,nS_filter+1)); % filter error estimates
+[innov, Sk] = deal(zeros(9,nS_filter+1));       % filter residuals + std dev
+[Pk] = deal(zeros(15,nS_filter+1));             % filter std dev
 
 % Initialise INS position using first WASP observation 
 r(:,1) = [WASPloc(:,1);0]; % Assume z = 0;
@@ -118,8 +118,9 @@ mn = mean(ms(:,1:samples),2);
 mn_cal_perp = mn_cal - dot(mn_cal,gn_cal)/dot(gn_cal,gn_cal)*gn_cal;
 mn_perp = mn - dot(mn,gn)/dot(gn,gn)*gn; % Component of magnetic vector in xy plane
 Cb2n = wahba([gn_cal,mn_cal_perp],[gn,mn_perp]); 
+% Cb2n = wahba([gn_cal,mn_cal],[gn,mn]);
 Cn2b(:,:,1) = Cb2n';
-Cs2b = eye(3); % Assume body and sensor framed are aligned
+Cs2b = eye(3); % Assume body and sensor framed are aligned for now
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -136,11 +137,14 @@ for t=1:nS  % timestep for the INS
     %bg(:,tf) = [0.42; 0.23; -0.1]; % manually tuned bias correction, for testing 315 circle
     
     % Apply bias corrections   
-    wsc(:,t) = ws(:,t) - bg(:,t);    % bias corrected gyro in s-frame
-    fsc(:,t) = fs(:,t) - ba(:,t);    % bias corrected accel in s-frame
-    fsoc(:,t) = fso(:,t) - ba(:,t);    % bias corrected accel in s-frame
+    wsc(:,t) = ws(:,t) - bg(:,tf);    % bias corrected gyro in s-frame
+    fsc(:,t) = fs(:,t) - ba(:,tf);    % bias corrected accel in s-frame
+    fsoc(:,t) = fso(:,t) - ba(:,tf);    % bias corrected accel in s-frame
     wb = Cs2b*wsc(:,t); % bias corrected gyro in b-frame
     fb = Cs2b*fsc(:,t); % bias corrected accel in b-frame
+    
+    actual_ba(:,t) = fs(:,t) - Cs2b'*Cb2n'*gn_cal;
+    actual_bg(:,t) = ws(:,t);
   
     % INS integration
     [a(:,t+1), v(:,t+1), r(:,t+1), Cb2n]...
@@ -150,41 +154,43 @@ for t=1:nS  % timestep for the INS
     
     % Error estimation with filter 
     if( tf <= numel(timestamps_WASP) && t < numel(timestamps_IMU) && timestamps_WASP(tf) < timestamps_IMU(t+1) )  
-        % WASP available
+        % Run filter updates only when WASP available
         
         dr_wasp = r(:,t+1) - [WASPloc(:,tf); 0]; % augment by assuming vertical movement is wrong
 
-%         if(size(signal_loss_errors,1)>0)
-%             signal_loss_errors(2,signal_loss_errors(1,:) == timestamps_WASP(tf)) = norm(dr_wasp(1:2));
-%         end;
+        if(size(signal_loss_errors,1)>0)
+            signal_loss_errors(2,signal_loss_errors(1,:) == timestamps_WASP(tf)) = norm(dr_wasp(1:2));
+        end;
         
+        if (tf > 1), dt_filter = timestamps_WASP(tf)- timestamps_WASP(tf-1); end;
         
-        [ ba_error, bg_error, dv(:,t+1), dr(:,t+1), epsilon(:,t+1), innov(:,t+1), Sk(:,t+1), Pk(:,t+1) ] ...
-            = errorfilter( Cs2b, Cb2n, fsoc(:,t), ms(:,t), dt, mn_cal, gn_cal, dr_wasp );
+        [ ba_error, bg_error, dv(:,tf+1), dr(:,tf+1), epsilon(:,tf+1), innov(:,tf+1), Sk(:,tf+1), Pk(:,tf+1) ] ...
+            = errorfilter( Cs2b, Cb2n, fsoc(:,t), ms(:,t), dt_filter, dr_wasp, mn_cal, gn_cal );
 
-                
+        ba(:,tf+1) = ba(:,tf) + ba_error;
+        bg(:,tf+1) = bg(:,tf) + bg_error;
+        
+        dr_feedback = dr(:,tf+1); 
+        dv_feedback = dv(:,tf+1);
+        epsilon_feedback = epsilon(:,tf+1);
+        
         tf = tf + 1;        % Increment filter time step
         
-    else % No WASP update available
+    else % Reset position errors (but not bias errors), since bias is corrected always, 
+        % position error is only fed back once
         
-        [ ba_error, bg_error, dv(:,t+1), dr(:,t+1), epsilon(:,t+1), innov(4:9,t+1), Sk(4:9,t+1), Pk(:,t+1) ] ...
-            = errorfilter( Cs2b, Cb2n, fsoc(:,t), ms(:,t), dt, mn_cal, gn_cal);
+        dr_feedback = zeros(3,1);
+        dv_feedback = zeros(3,1);
+        epsilon_feedback = zeros(3,1);
    
     end;
     
-    ba(:,t+1) = ba(:,t) + ba_error;
-    bg(:,t+1) = bg(:,t) + bg_error;
-
-    dr_feedback = dr(:,t+1); 
-    dv_feedback = dv(:,t+1);
-    epsilon_feedback = epsilon(:,t+1);
-    
 end;  
 
-% if loss_period > 0
-%     signal_loss_mean_error = mean(signal_loss_errors(2,:))
-%     signal_loss_median_error = median(signal_loss_errors(2,:))
-% end;
+if loss_period > 0
+    signal_loss_mean_error = mean(signal_loss_errors(2,:))
+    signal_loss_median_error = median(signal_loss_errors(2,:))
+end;
 
 % for i=1:size(Cn2b,3)-1
 %     grav_error_nav(:,i) = Cn2b(:,:,i)'*fs(:,i) - gn_cal;

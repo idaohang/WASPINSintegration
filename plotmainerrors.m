@@ -7,7 +7,8 @@
 global dr dv epsilon timestamps_WASP nS_filter 
 
 scrsz = get(0,'ScreenSize'); % Full screen
-figure('OuterPosition',[1 1 scrsz(3)/2 scrsz(4)]);
+%figure('OuterPosition',[1 1 scrsz(3)/2 scrsz(4)]);
+figure('OuterPosition',[1+scrsz(3)/2 1 scrsz(3)/2 scrsz(4)]);
 
 subplot(3, 1, 1), plot(timestamps_WASP(1:nS_filter), dr(:,1:nS_filter), '.'), grid
 xlabel('time in secs'),
@@ -22,7 +23,7 @@ xlabel('time in secs'),
 ylabel('Est. Orientation error epsilon deg') , legend('R','P','Y');
 
 
-%figure('OuterPosition',[1+scrsz(3)/2 1 scrsz(3)/2 scrsz(4)]);
+
 
 
 
