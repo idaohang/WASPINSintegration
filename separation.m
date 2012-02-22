@@ -7,7 +7,8 @@ clear all;
 offset = 786.3116; % worked out in calcTxTimes.m
 true_separation = 1.145;
 
-main( 'WASP_INS_data/20111220/w220-20111220-circle-00005.wsd' );
+main( 'WASP_INS_data/20111220/w220-20111220-rotateinplace-00003.wsd' );
+%main( 'WASP_INS_data/20111220/w220-20111220-circle-00005.wsd' );
 %main( 'WASP_INS_data/20111220/w220-20111220-Lpath-00006.wsd' );
 global r Cn2b timestamps_IMU timestamps_WASP WASPloc
 r1 = r;
@@ -16,7 +17,8 @@ timestamps1 = timestamps_IMU;
 WASPloc1 = WASPloc;
 timestamps_WASP1 = timestamps_WASP;
 
-main( 'WASP_INS_data/20111220/w315-20111220-circle-00005.wsd' );
+main( 'WASP_INS_data/20111220/w315-20111220-rotateinplace-00003.wsd' );
+%main( 'WASP_INS_data/20111220/w315-20111220-circle-00005.wsd' );
 %main( 'WASP_INS_data/20111220/w315-20111220-Lpath-00006.wsd' );
 r2 = r;
 Cn2b2 = Cn2b;

@@ -1,0 +1,1754 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass IEEEtran
+\begin_preamble
+% for subfigures/subtables
+\ifCLASSOPTIONcompsoc
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\else
+\usepackage[caption=false,font=footnotesize]{subfig}
+\fi
+\end_preamble
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding default
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\float_placement tbh
+\paperfontsize default
+\spacing single
+\use_hyperref true
+\pdf_title "Your Title"
+\pdf_author "Your Name"
+\pdf_bookmarks true
+\pdf_bookmarksnumbered true
+\pdf_bookmarksopen true
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks false
+\pdf_pdfborder true
+\pdf_colorlinks false
+\pdf_backref false
+\pdf_pdfusetitle false
+\pdf_quoted_options "pdfpagelayout=OneColumn, pdfnewwindow=true, pdfstartview=XYZ, plainpages=false"
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 0
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 2
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+This is a template LyX file for articles to be submitted to journals of
+ the Institute of Electrical and Electronics Engineers (IEEE).
+ For general infos see 
+\begin_inset Flex URL
+status open
+
+\begin_layout Plain Layout
+
+http://wiki.lyx.org/Examples/IEEE
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+You find the IEEEtran document class documentation here: 
+\begin_inset Flex URL
+status collapsed
+
+\begin_layout Plain Layout
+
+http://mirror.ctan.org/macros/latex/contrib/IEEEtran/IEEEtran_HOWTO.pdf
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Title
+Proposed Kalman Filter for WASP / INS integration
+\end_layout
+
+\begin_layout Author
+Peter Anderson
+\end_layout
+
+\begin_layout Abstract
+This paper outlines a proposed error-state (indirect) kalman filter for
+ WASP / INS integration.
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+The 
+\series bold
+
+\backslash
+IEEEPARstart
+\series default
+ command is needed in the first paragraph fo the document.
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+
+\backslash
+IEEEPARstart{
+\end_layout
+
+\end_inset
+
+ T
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}{
+\end_layout
+
+\end_inset
+
+here
+\begin_inset ERT
+status collapsed
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+ are a number of design choices available when constructing a filter for
+ integrating multiple sensors.
+ In this case the error-state (indirect) Kalman filter is proposed, such
+ that the estimated variables are the errors in position, velocity and orientati
+on calculated from INS integration relative to the true values.
+ Consistent with this approach, the measurement presented to the filter
+ contains an observation of the position error, calculated as the difference
+ between the INS integrated position and the noisy observation of the true
+ position provided from WASP.
+ The main reasons for adopting this formulation are: 1.
+ There is no need to define a motion model, so the same filter can be used
+ for both vehicle and pedestrian applications without modification; 2.
+ The output from the system is position, velocity, acceleration and orientation
+ integrated directly from the error-compensated IMU.
+ Since the filter is outside of this INS loop, it can be run at lower update
+ frequency than the IMU, whilst still preserving high dynamics output; 3.
+ Since orientation error angles should be small, we can accurately linearise
+ the system dynamics using small angle approximations.
+ These approximations would not be valid if the Kalman filter state including
+ orientation rather than orientation error.
+ 
+\end_layout
+
+\begin_layout Standard
+There are two ways the Kalman filter error estimate can be used in a tracking
+ system of this type.
+ It can be fed forward to correct the INS position estimate without updating
+ the INS (feedforward architecture), or it can be fed back to the INS to
+ correct its next starting position as well (feedback architecture).
+ The proposed system uses the feedback architecture, since the approximations
+ used to propagate the orientation error in the filter process model are
+ only valid for small rotations.
+ The feedback architecture has the advantage of ensuring orientation errors
+ remain small.
+ This occurs because every time the mean of the Kalman filter error state
+ is fed back to the INS, the state mean (but not the state covariance) can
+ be reset to zero.
+ 
+\end_layout
+
+\begin_layout Standard
+In addition to the positioning errors, the proposed Kalman filter state
+ also contains estimates for the drift bias in the IMU gyros and accelerometers,
+ which can be fed back to correct the sensor outputs before INS integration.
+ As such, the proposed design corrects for accumulated drift errors whilst
+ also estimating and correcting the bias causing the buildup of drift errors.
+ In the literature this design is sometimes labeled as a dual kalman filter
+ or augmented kalman filter since it simultaneously estimates both the state
+ and parameters of the system.
+ It is anticipated that this augmentation will perform the same function
+ as the outer loop process used by 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5977573"
+
+\end_inset
+
+ to estimate gyro drift bias.
+ Consistent with 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5711994"
+
+\end_inset
+
+, the measurement vector includes an observation of the difference between
+ the measured and estimated accelerometer and magnetometer data, which allows
+ gyro bias to be estimated, whilst accelerometer bias can be estimated from
+ WASP position observations.
+ Constant turn-on biases and scale biases have not been modeled, and are
+ therefore assumed to be corrected in an initial calibration step if necessary.
+\end_layout
+
+\begin_layout Standard
+Another key consideration is the 
+\lang british
+parametrisation
+\lang english
+ of orientation errors in the filter.
+ This filter uses the Euler angle 
+\lang british
+parametrisation
+\lang english
+.
+ The quaternion orientation representation has the advantage of dynamics
+ that are linear and non-singular (it avoids gimbal-lock).
+ However, assuming orientation errors will remain small, gimbal-lock cannot
+ occur and the Euler angle parameterisation is well approximated by linear
+ dynamics.
+ The Euler angle parametrisation has therefore been chosen because it has
+ no redundant parameters and keeps the Kalman filter state as small as possible.
+ 
+\end_layout
+
+\begin_layout Standard
+In the GPS / INS integration community, filters are often characterised
+ according to whether there is loose or tight coupling between GPS and INS
+ measurements.
+ This filter can be characterised as loosely coupled, in the sense that
+ the measurement required from the WASP system is a location observation,
+ rather than a set of ranges to WASP beacons.
+ This disadvantage of this approach is that WASP measurements cannot be
+ used if there are less than 3 WASP beacons in range, however the measurement
+ updates are somewhat simplified relative to a tightly coupled filter.
+ It is anticipated that if the loosely coupled filter can be validated then
+ the measurement function can be modified to implement tight coupling at
+ a later date.
+\end_layout
+
+\begin_layout Standard
+An overview of the system is provided in the figure below.
+ All symbols are defined in the following sections.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+System overview
+\end_layout
+
+\end_inset
+
+
+\begin_inset Graphics
+	filename diagram.png
+	lyxscale 20
+	scale 40
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Before outlining the system in detail, first define three frames of reference:
+ the sensor frame (s-frame), the body frame (b-frame) and the local navigation
+ frame (n-frame).
+ The INS navigation equations are developed in the n-frame using north-east-down
+ (NED) coordinates with components designated with subscripts 
+\begin_inset Formula $x$
+\end_inset
+
+, 
+\begin_inset Formula $y$
+\end_inset
+
+ and 
+\begin_inset Formula $z$
+\end_inset
+
+ respectively.
+ The (assumed constant) rotation matrix that transforms a vector in the
+ s-frame into the b-frame is given by 
+\begin_inset Formula $C_{s}^{b}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Sensor models
+\end_layout
+
+\begin_layout Standard
+The accelerometers and the gyros are considered to operate according to
+ the same sensor model, which assumes that the sensor outputs are corrupted
+ by a high frequency white noise process and a drifting bias term.
+ The measurement equations for the accelerometer and gyro are therefore
+ given by:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{\tilde{f}}^{s}=\underline{f}^{s}+\underline{b}_{a}+\underline{n}_{a}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{\tilde{\omega}}^{s}=\underline{\omega}^{s}+\underline{b}_{g}+\underline{n}_{g}
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $\widetilde{f}^{s}$
+\end_inset
+
+ and 
+\begin_inset Formula $\tilde{\omega}^{s}$
+\end_inset
+
+ are the sensor measurements in the s-frame, 
+\begin_inset Formula $f^{s}$
+\end_inset
+
+ and 
+\begin_inset Formula $\omega^{s}$
+\end_inset
+
+ are the true measurements, 
+\begin_inset Formula $\underline{b}$
+\end_inset
+
+ is the drift-rate bias and 
+\begin_inset Formula $\underline{n}$
+\end_inset
+
+ is sensor noise, assumed to be Gaussian white noise with covariance 
+\begin_inset Formula $N_{a}$
+\end_inset
+
+ and 
+\begin_inset Formula $N_{g}$
+\end_inset
+
+ respectively.
+ The drift-rate bias 
+\begin_inset Formula $\underline{b}$
+\end_inset
+
+ is not a static quantity, but is assumed to be a first order Gauss-Markov
+ process with correlation time 
+\begin_inset Formula $T$
+\end_inset
+
+ and white process noise 
+\begin_inset Formula $\underline{\mu}$
+\end_inset
+
+, with process noise covariance 
+\begin_inset Formula $U_{a}$
+\end_inset
+
+ and 
+\begin_inset Formula $U_{g}$
+\end_inset
+
+ respectively.
+ The two noise processes are assumed to be uncorrelated.
+ Thus the drift-rate bias propagates as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{\dot{b}}_{a}=-\frac{1}{T_{a}}\underline{b}_{a}+\underline{\mu}_{a}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\underline{\dot{b}}_{g}=-\frac{1}{T_{g}}\underline{b}_{g}+\underline{\mu}_{g}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The discrete time models are written as:
+\begin_inset Formula 
+\begin{equation}
+\underline{b}_{a,k+1}=e^{-\frac{dt}{T_{a}}}\underline{b}_{a,k}+\underline{\mu}_{a,k}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{b}_{g,k+1}=e^{-\frac{dt}{T_{g}}}\underline{b}_{g,k}+\underline{\mu}_{g,k}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+INS navigation equations
+\end_layout
+
+\begin_layout Standard
+The INS navigation equations are used to integrate gyro and accelerometer
+ data to determine the position, velocity and orientation of the IMU in
+ the n-frame.
+ Neglecting the curvature of the earth's surface, fluctuations in gravitational
+ acceleration, the Coriolis effect and the rotation of the navigation frame,
+ the simplified INS navigation equations expressed in continuous time are
+ as follows (
+\begin_inset CommandInset citation
+LatexCommand cite
+key "titterton2004strapdown"
+
+\end_inset
+
+):
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\left[\begin{array}{c}
+\underline{\dot{r}}^{n}\\
+\underline{\dot{v}}^{n}\\
+\dot{C}_{b}^{n}
+\end{array}\right]=\left[\begin{array}{c}
+\underline{v}^{n}\\
+C_{b}^{n}\underline{f}^{b}+\underline{g}^{n}\\
+C_{b}^{n}\left[\underline{\omega}^{b}\times\right]
+\end{array}\right]
+\end{equation}
+
+\end_inset
+
+where:
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{g}^{n}$
+\end_inset
+
+is the 3-component gravity vector in the n-frame
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{f}^{b}$
+\end_inset
+
+is the 3-component accelerometer force vector in the b-frame
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\underline{\underline{\omega}^{b}}=[\omega_{x}^{b}\;\omega_{y}^{b}\;\omega_{z}^{b}]^{T}$
+\end_inset
+
+is the body angular velocity vector which represents the turn rate of the
+ b-frame with respect to the n-frame expressed in body axes
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\left[\underline{\omega}^{b}\times\right]$
+\end_inset
+
+ is the skew-symmetric matrix form of the body angular rate vector (also
+ known as the cross product operator) given by: 
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula 
+\begin{equation}
+\left[\underline{\omega}^{b}\times\right]=\left[\begin{array}{ccc}
+0 & -\omega_{z} & \omega_{y}\\
+\omega_{z} & 0 & -\omega_{x}\\
+-\omega_{y} & \omega_{x} & 0
+\end{array}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Discrete time approximations with corrections
+\end_layout
+
+\begin_layout Standard
+Since the output of the proposed system is the directly integrated INS position,
+ velocity and orientation, the INS navigation equations must be approximated
+ in discrete time using bias compensated sensor measurements.
+ In addition, the INS navigation equations must be corrected for navigation
+ errors estimated by the Kalman filter.
+ Firstly, the bias compensated sensor measurements in the b-frame measured
+ over the interval 
+\begin_inset Formula $t_{k}$
+\end_inset
+
+ to 
+\begin_inset Formula $t_{k+1}$
+\end_inset
+
+are calculated as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\hat{\underline{f}}_{k+1}^{b}=C_{s}^{b}\left[\tilde{\underline{f}}_{k+1}^{s}-\underline{b}_{a,k}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\hat{\underline{\omega}}_{k+1}^{b}=C_{s}^{b}\left[\widetilde{\underline{\omega}}_{k+1}^{s}-\underline{b}_{g,k}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Assuming knowledge of the gravity vector 
+\begin_inset Formula $g^{n}$
+\end_inset
+
+, the acceleration estimate in discrete time (including the rotation correction)
+ can be approximated by the following equation:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{a}_{k+1}^{n}=C_{b,k}^{n}\left[\hat{f}_{k+1}^{b}.dt+\frac{1}{2}\hat{\omega}^{b}.dt\times\hat{f}_{k+1}^{b}.dt\right]-\underline{g}^{n}.dt
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where:
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{a}_{k+1}^{n}$
+\end_inset
+
+is the acceleration 
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+over the interval 
+\begin_inset Formula $t_{k}$
+\end_inset
+
+ to 
+\begin_inset Formula $t_{k+1}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $dt$
+\end_inset
+
+ is the time interval
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\underline{g}^{n}.dt$
+\end_inset
+
+ is the gravity vector correction
+\end_layout
+
+\begin_layout Standard
+The updated velocity estimate at 
+\begin_inset Formula $t_{k}$
+\end_inset
+
+ is therefore given by:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{v}_{k+1}^{n}=\underline{v}_{k}^{n}+\underline{a}_{k+1}^{n}-\delta\underline{v}_{k}^{n}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{v}_{k+1}^{n}$
+\end_inset
+
+is the velocity 
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+at 
+\begin_inset Formula $t_{k+1}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{v}_{k}^{n}$
+\end_inset
+
+ is the 2-component velocity error correction augmented with a zero in the
+ z-axis
+\end_layout
+
+\begin_layout Standard
+The updated position estimate can be found by trapezoidal integration of
+ velocity:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{r}_{k+1}^{n}=\underline{r}_{k}^{n}+\left[\frac{\underline{v}_{k}^{n}+\underline{v}_{k+1}^{n}}{2}\right].dt-\delta\underline{r}_{k}^{n}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{r}_{k+1}^{n}$
+\end_inset
+
+is the position 
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+at 
+\begin_inset Formula $t_{k+1}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{r}_{k}^{n}$
+\end_inset
+
+ is the 2-component position error correction augmented with a zero in the
+ z-axis
+\end_layout
+
+\begin_layout Standard
+Assuming 
+\begin_inset Formula $\underline{\hat{\omega}}_{k}^{b}$
+\end_inset
+
+ is constant during the update interval, the compensated rotation vector
+ over the time interval 
+\begin_inset Formula $t_{k}$
+\end_inset
+
+ to 
+\begin_inset Formula $t_{k}+1$
+\end_inset
+
+ is given by:
+\begin_inset Formula 
+\begin{equation}
+\underline{\hat{\sigma}}_{k+1}=\underline{\hat{\omega}}_{k+1}.dt
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The new body orientation matrix can now be approximated by:
+\begin_inset Formula 
+\begin{equation}
+C_{b,k+1}^{n}=\left[I+\left[\underline{(\varepsilon}_{k}-\underline{\hat{\sigma}}_{k+1})\times\right]\right]C_{b,k}^{n}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\underline{\hat{\sigma}}_{k+1}$
+\end_inset
+
+ is the compensated rotation vector over the time interval 
+\begin_inset Formula $t_{k}$
+\end_inset
+
+ to 
+\begin_inset Formula $t_{k+1}$
+\end_inset
+
+ (as previously defined)
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{\varepsilon}_{k}$
+\end_inset
+
+is the orientation correction estimated from the Kalman filter as defined
+ in 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "orientation error"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Because the formula above again uses small angle approximations and neglects
+ higher order terms, it is necessary to re-orthogonalise the rows of the
+ 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $C_{b}^{n}$
+\end_inset
+
+ orientation matrix at periodic intervals.
+\end_layout
+
+\begin_layout Section
+Kalman filter
+\end_layout
+
+\begin_layout Subsection
+State vector
+\end_layout
+
+\begin_layout Standard
+The KF error state vector has 13 components as follows: 
+\begin_inset Formula 
+\begin{equation}
+\underline{x}=\left[\delta\underline{r}^{nT}\quad\delta\underline{v}^{nT}\quad\underline{\varepsilon}^{T}\quad\underline{b}_{g}^{T}\quad\underline{b}_{a}^{T}\right]^{T}
+\end{equation}
+
+\end_inset
+
+where:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $T$
+\end_inset
+
+ is used as a superscript to represent matrix or vector transposition
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{r}^{n}$
+\end_inset
+
+ is the 2-component position error vector in the n-frame
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{v}^{n}$
+\end_inset
+
+ is the 2-component velocity error vector in the n-frame
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\underline{\varepsilon}$
+\end_inset
+
+ is the 3-component orientation error vector in Euler angles
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\underline{b}_{g}$
+\end_inset
+
+ is the 3-component gyro bias vector
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\underline{b}_{a}$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+is the 3-component accelerometer bias vector
+\end_layout
+
+\begin_layout Standard
+The z (vertical) components of the position and velocity error vectors are
+ not included in the state since, unless WASP nodes are deployed vertically,
+ these errors are likely to be unobservable.
+ 
+\end_layout
+
+\begin_layout Subsection
+Discrete time formulation
+\end_layout
+
+\begin_layout Standard
+The dynamics of the KF error state vector can be expressed in continuous
+ time according to the following first-order matrix differential equation:
+\begin_inset Formula 
+\begin{equation}
+\underline{\dot{x}}(t)=F(t)\underline{x}(t)+G(t)\underline{w}(t)
+\end{equation}
+
+\end_inset
+
+where 
+\begin_inset Formula $F$
+\end_inset
+
+ is the system dynamics matrix, 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\underline{w}$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ is process noise, and 
+\begin_inset Formula $G$
+\end_inset
+
+ is the noise-input mapping matrix.
+ Although it is necessary to convert from the continuous time formulation
+ to discrete time in order to implement the Kalman filter, the continuous
+ time formulation preserves the true dynamics of system in the process model.
+ Approximations can be made in the actual implementation by choosing the
+ appropriate cut-off for the Taylor-series expansion of the exponential
+ solution to this differential equation, where:
+\begin_inset Formula 
+\begin{equation}
+\underline{x}_{k+1}=\Phi_{k}\underline{x}_{k}+\underline{w}_{k}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset Formula 
+\begin{equation}
+\Phi_{k}=e^{F_{k}.dt}=I+F_{k}.dt+\frac{(F_{k}.dt)^{2}}{2!}+\frac{(F_{k}.dt)^{3}}{3!}+...
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\Phi_{k}$
+\end_inset
+
+ is the state transition matrix, 
+\begin_inset Formula $dt$
+\end_inset
+
+ is the length of the sampling interval, and the 
+\begin_inset Formula $k$
+\end_inset
+
+ subscript indicates a particular discrete point in time.
+ The covariance matrix 
+\begin_inset Formula $Q_{k}$
+\end_inset
+
+ associated to the discrete-time noise vector 
+\begin_inset Formula $w_{k}$
+\end_inset
+
+ can be approximately determined by the following expression:
+\begin_inset Formula 
+\begin{equation}
+Q_{k}=\frac{1}{2}\left[\Phi_{k}G(t_{k})Q(t_{k})G^{T}(t_{k})+G(t_{k})Q(t_{k})G^{T}(t_{k})\Phi_{k}^{T}\right].dt
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $Q(t_{k})$
+\end_inset
+
+ is the covariance matrix associated with the continuous time noise vector
+ 
+\begin_inset Formula $w(t)$
+\end_inset
+
+.
+ To determine the system dynamics matrix 
+\begin_inset Formula $F$
+\end_inset
+
+, and the noise-input mapping matrix 
+\begin_inset Formula $G$
+\end_inset
+
+, the INS error dynamics equations must first be described.
+\end_layout
+
+\begin_layout Subsection
+INS error dynamics equations
+\end_layout
+
+\begin_layout Standard
+The equations describing the propagation of errors in the Kalman filter
+ process model can be found by perturbing the INS navigation equations.
+ 
+\end_layout
+
+\begin_layout Subsubsection
+Orientation errors
+\end_layout
+
+\begin_layout Standard
+Using small angle approximations and neglecting product terms which are
+ also small, the estimated orientation 
+\begin_inset Formula $\widetilde{C}_{b}^{n}$
+\end_inset
+
+ can be expressed as a transformation of the true orientation 
+\begin_inset Formula $C_{b}^{n}$
+\end_inset
+
+ as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\widetilde{C}_{b}^{n}=\left[I-\left[\underline{\varepsilon}\times\right]\right]C_{b}^{n}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\underline{\varepsilon}$
+\end_inset
+
+ is the orientation error vector given by 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\underline{\varepsilon}=\left[\delta\alpha\;\delta\beta\;\delta\gamma\right]^{T}$
+\end_inset
+
+
+\begin_inset CommandInset label
+LatexCommand label
+name "orientation error"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Formula $\delta\alpha$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+is the error in rotation about the 
+\begin_inset Formula $x$
+\end_inset
+
+ axis
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\beta$
+\end_inset
+
+ is the error in rotation about the 
+\begin_inset Formula $y$
+\end_inset
+
+ axis
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\gamma$
+\end_inset
+
+ is the error in rotation about the 
+\begin_inset Formula $z$
+\end_inset
+
+ axis
+\end_layout
+
+\begin_layout Standard
+Following the method in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "titterton2004strapdown"
+
+\end_inset
+
+, neglecting error product terms and rotation of the n-frame, it can be
+ shown that the orientation error propagates as a function of gyro measurement
+ errors as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{\dot{\varepsilon}}=-C_{b}^{n}\delta\underline{\omega}^{b}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\delta\underline{\omega}^{b}$
+\end_inset
+
+ is the error in gyro measurement, containing both drift-bias and high frequency
+ noise such that 
+\begin_inset Formula 
+\[
+\delta\underline{\omega}^{b}=C_{s}^{b}\left[\underline{b}_{g}+\underline{n}_{g}\right]
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Velocity and position errors
+\end_layout
+
+\begin_layout Standard
+Ignoring the Coriolis effect and product terms, velocity errors propagate
+ as a function of accelerometer measurement errors, and the impact of orientatio
+n errors on accelerations:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\delta\underline{\dot{v}}^{n}=\left[\underline{f}^{n}\times\right]\underline{\varepsilon}+C_{b}^{n}\delta f^{b}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\delta\underline{f}^{b}$
+\end_inset
+
+ is the error in accelerometer measurement, containing both drift-bias and
+ high frequency noise such that 
+\begin_inset Formula $\delta\underline{f}^{b}=C_{s}^{b}\left[\underline{b}_{a}+\underline{n}_{a}\right]$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, the position errors can be expressed as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\delta\underline{\dot{r}}^{n}=\delta\underline{v}^{n}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Process model
+\end_layout
+
+\begin_layout Standard
+Recalling the definition of the state equation as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\underline{\dot{x}}=F\underline{x}+G\underline{w}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+with state vector: 
+\begin_inset Formula 
+\[
+\underline{x}=\left[\delta\underline{r}^{nT}\quad\delta\underline{v}^{nT}\quad\underline{\varepsilon}^{T}\quad\underline{b}_{g}^{T}\quad\underline{b}_{a}^{T}\right]^{T}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+using the sensor models and the INS error dynamics equations, we can now
+ define:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+F=\left[\begin{array}{ccccc}
+0 & I & 0 & 0 & 0\\
+0 & 0 & \left[\underline{f}^{n}\times\right] & 0 & C_{b}^{n}C_{s}^{b}\\
+0 & 0 & 0 & -C_{b}^{n}C_{s}^{b} & 0\\
+0 & 0 & 0 & diag(\frac{-1}{T_{g}}) & 0\\
+0 & 0 & 0 & 0 & diag(\frac{-1}{T_{a}})
+\end{array}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{w}=\left[\underline{n}_{a}^{T}\quad\underline{n}_{g}^{T}\quad\underline{\mu}_{g}^{T}\quad\underline{\mu}_{a}^{T}\right]^{T}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+G=\left[\begin{array}{cccc}
+0 & 0 & 0 & 0\\
+C_{b}^{n}C_{s}^{b} & 0 & 0 & 0\\
+0 & -C_{b}^{n}C_{s}^{b} & 0 & 0\\
+0 & 0 & I & 0\\
+0 & 0 & 0 & I
+\end{array}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $0$
+\end_inset
+
+ is an appropriately sized zero matrix
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $I$
+\end_inset
+
+ is an appropriately sized identity matrix
+\end_layout
+
+\begin_layout Subsection
+Measurement model
+\end_layout
+
+\begin_layout Standard
+The KF measurement vector consists of an observation of position error using
+ WASP, and an observation of the difference between the measured and estimated
+ accelerometer and magnetometer data (as in 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5711994"
+
+\end_inset
+
+).
+ Conceptually, the position error observation enables position, velocity
+ and accelerometer bias errors to be estimated.
+ The accelerometer and magnetometer error observations enable gyro bias
+ errors to be estimated.
+ In practice position observations from WASP occur with a frequency of around
+ 10Hz, relative to approximately 800Hz for the IMU accelerometer and magnetomete
+r observations, so this component of the measurement vector will often consisten
+t of zeros.
+ The measurement vector is as follows:
+\begin_inset Formula 
+\begin{equation}
+\underline{z}=\left[\begin{array}{c}
+\delta\underline{r}^{n}\\
+\delta\underline{f}^{s}\\
+\delta\underline{m}^{s}
+\end{array}\right]=\left[\begin{array}{c}
+\underline{r}^{n}-\underline{r}_{WASP}^{n}\\
+\underline{\hat{f}}^{s}-C_{b}^{s}C_{n}^{b}\underline{g}^{n}\\
+\hat{\underline{m}}^{s}-C_{b}^{s}C_{n}^{b}\underline{m}^{n}
+\end{array}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{r}^{n}$
+\end_inset
+
+ is the INS position error (relative to the WASP position in the n-frame)
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{f}^{s}$
+\end_inset
+
+ is the observed gravity error vector (relative to the INS predicted gravity
+ vector in the s-frame)
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $\delta\underline{m}^{s}$
+\end_inset
+
+ is the observed magnetic field error vector (relative to the INS predicted
+ field vector in the s-frame)
+\end_layout
+
+\begin_layout Standard
+Note that in accordance with 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5711994"
+
+\end_inset
+
+, the bias compensated sensor measurments 
+\begin_inset Formula $\hat{\underline{f}}^{s}$
+\end_inset
+
+ and 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\hat{\underline{m}}^{s}$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ should be normalised before calculating the measurement errors above, or
+ otherwise the magnitude error will reduce the orientation precision.
+ Using the standard observation model formulation as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\underline{z}_{k}=H\underline{x}_{k}+\underline{v}_{k}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\underline{v}_{k}$
+\end_inset
+
+is the measurement noise vector, 
+\begin_inset Formula $\underline{v}_{k}\sim N(0,R_{k})$
+\end_inset
+
+, then:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+H=\left[\begin{array}{ccccc}
+I & 0 & 0 & 0 & 0\\
+0 & 0 & \left[C_{b}^{s}C_{n}^{b}\left[\underline{g}^{n}\times\right]\right] & 0 & 0\\
+0 & 0 & \left[C_{b}^{s}C_{n}^{b}\left[\underline{m}^{n}\times\right]\right] & 0 & 0
+\end{array}\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $0$
+\end_inset
+
+ is an appropriately sized zero matrix
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $I$
+\end_inset
+
+ is an appropriately sized identity matrix
+\end_layout
+
+\begin_layout Subsection
+Adaptive weighting
+\end_layout
+
+\begin_layout Standard
+The uncertainty in the covariance parameters of the process noise 
+\begin_inset Formula $Q$
+\end_inset
+
+ and the measurement errors 
+\begin_inset Formula $R$
+\end_inset
+
+ has a substantial effect on Kalman filter performance.
+ Since process noise 
+\begin_inset Formula $Q$
+\end_inset
+
+ is determined by sensor noise, it is assumed to remain relatively constant.
+ However, since measurement error 
+\begin_inset Formula $R$
+\end_inset
+
+ is dependent on the application environment, an adaptive weighting method
+ based on covariance scaling is proposed.
+ The covariance scaling method is designed to improve filter stability by
+ introducing a multiplication factor to the measurement error covariance.
+ With regards to gravity and magnetic field errors, the covariance scaling
+ factor follows 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5711994"
+
+\end_inset
+
+.
+ With regards to the position error observation, it is proposed that the
+ covariance scaling factor be related to the variance of the residuals from
+ the WASP OLS position estimate.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "references"
+options "plain"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

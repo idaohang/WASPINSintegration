@@ -1,5 +1,5 @@
 function [ ba, bg, dv, dr, epsilon, innov, Sk_diag, Pk_diag ]...
-    = errorfilter( Cs2b, Cb2n, fs, ms, dt, mn_cal, gn_cal, dr_wasp )
+    = errorfilter( Cs2b, Cb2n, fs, ms, dt, dr_wasp, mn_cal, gn_cal )
 %errorfilter Implements an error state filter
 %   outputs of the function are:
 %   ba - estimated accelerometer bias in the s-frame (in mg)
@@ -30,9 +30,9 @@ wasp_err = 0.10^2; % (in m) 0.10
 vert_err = 0.5^2; % Assume vertical movement is an error, but not much certainty
 
 %   Sensors noise covariances
-Na = 100;    % Accel sensor noise cov (in mg squared) 50 % increase to put less weight on observation
-Ng = 1;   % Gyro sensor noise cov (in deg/s squared) 2 % increase to make bias estimate more stable
-Nm = 50;    % Magnetometer sensor noise covariance
+Na = 100;    % Accel sensor noise cov (in mg squared) 100 % increase to put less weight on observation
+Ng = 1;   % Gyro sensor noise cov (in deg/s squared) 1 % increase to make bias estimate more stable
+Nm = 50;    % Magnetometer sensor noise covariance 50
 
 Ua = 1;  % Accel bias drift noise cov 30
 Ug = 0;   % Gyro bias drift noise cov 0.01 % decreas to make bias estimate stable
@@ -50,12 +50,10 @@ alpha_m = 0;          % Magnetometer observation 30 100
 %   Temporary variables
 Cs2n = Cb2n*Cs2b;           % estimated DCM s-frame to n-frame
 Cn2s = Cs2n';               % estimated DCM n-frame to s-frame
+fn_cross = mg2ms(mat_cross(Cs2n*fs));
 
 gn_mag = norm(gn_cal);     
 gn_dir = gn_cal/gn_mag;
-
-fn_cross = mg2ms(mat_cross(Cs2n*fs));
-
 fs_mag = norm(fs);          % magnitude of accel in s-frame (in mg)
 fs_dir = fs/fs_mag;         % direction of accel in s-frame (unit length)       
 ms_mag = norm(ms);          % magnitude of magnetic field in s-frame (in mgauss)
@@ -94,7 +92,6 @@ G = [  zeros(3,3),          zeros(3,3),     zeros(3,3),      zeros(3,3);
 Qk = 1/2*(Fk*G*Qt*G' + G*Qt*G'*Fk')*dt;
 
 
-
 %   Measurement noise covariance (adaptive) refer "Adaptive Sensor Data
 %   Fusion in Motion Capture"
 ms_mag_error = max([ ms_mag/mn_cal_mag; mn_cal_mag/ms_mag]); % from 1 to Inf
@@ -106,32 +103,18 @@ fs_dir_error = norm( Cs2n*fs_dir - gn_dir );
 ms_confidence = exp(alpha_m*ms_mag_error*ms_dir_error); % exponent is from 0 to Inf
 fs_confidence = exp(alpha_f*fs_mag_error*fs_dir_error);
 
-if nargin < 8   % No WASP observation
-    %   Measurement
-    zk = [ fs - Cn2s*gn_cal;      ms - Cn2s*mn_cal];  
 
-    %   Measurement matrix
-    Hk = [ zeros(3,3), zeros(3,3),     Cn2s*mat_cross(gn_cal),      zeros(3,3),     eye(3); 
-           zeros(3,3), zeros(3,3),     Cn2s*mat_cross(mn_cal),      zeros(3,3),     zeros(3,3)];   
+%   Measurement
+zk = [ dr_wasp;     fs - Cn2s*gn_cal;      ms - Cn2s*mn_cal];
 
-    %   Measurement covariance
-    Rk = diag([min(fs_confidence*Na,1000^2)*ones(3,1);  min(ms_confidence*Nm,100^2)*ones(3,1)]);
-    
-else % There is a WASP observation
-    
-    %   Measurement
-    zk = [ dr_wasp;     fs - Cn2s*gn_cal;      ms - Cn2s*mn_cal];  
+%   Measurement matrix
+Hk = [ eye(3),     zeros(3,3),     zeros(3,3),                  zeros(3,3),     zeros(3,3);
+       zeros(3,3), zeros(3,3),     Cn2s*mat_cross(gn_cal),      zeros(3,3),     eye(3); 
+       zeros(3,3), zeros(3,3),     Cn2s*mat_cross(mn_cal),      zeros(3,3),     zeros(3,3)];
 
-    %   Measurement matrix
-    Hk = [ eye(3),     zeros(3,3),     zeros(3,3),                  zeros(3,3),     zeros(3,3);
-           zeros(3,3), zeros(3,3),     Cn2s*mat_cross(gn_cal),      zeros(3,3),     eye(3); 
-           zeros(3,3), zeros(3,3),     Cn2s*mat_cross(mn_cal),      zeros(3,3),     zeros(3,3)];   
+   %   Measurement covariance   
+Rk = diag([wasp_err*ones(2,1); vert_err; min(fs_confidence*Na,1000^2)*ones(3,1);  min(ms_confidence*Nm,100^2)*ones(3,1)]);
 
-    %   Measurement covariance
-    Rk = diag([wasp_err*ones(2,1); vert_err; min(fs_confidence*Na,1000^2)*ones(3,1);  min(ms_confidence*Nm,100^2)*ones(3,1)]);
-
-end;
- 
 
 %   Run the Kalman Filter
 [xkm, Pkm, innov, Sk_diag] = KF(xkm, Pkm, zk, Fk, Qk, Hk, Rk);

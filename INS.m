@@ -35,7 +35,7 @@ if isempty(count)
 end;
 count = count + 1;
 
-if count == 5 % Every 5 iterations
+if count == 50 % Every 50 iterations
     count = 0;
     [U S V] = svd(Cb2n);
     Cb2n = U*V'; % Drop the diagonal
