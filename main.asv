@@ -110,7 +110,7 @@ for t=1:nS  % timestep for the INS
     %bg(:,tf) = [0.42; 0.23; -0.1]; % manually tuned bias correction, for testing 315 circle
     
     % Apply bias corrections   
-    msc(:,t) = ms(:,t) - bm(:,t);    % bias corrected magnetometer in s-frame
+    msc(:,t) = ms(:,t) - bm(:,t);    % bias corrected gyro in s-frame
     wsc(:,t) = ws(:,t) - bg(:,t);    % bias corrected gyro in s-frame
     fsc(:,t) = fs(:,t) - ba(:,t);    % bias corrected accel in s-frame
     wb = Cs2b*wsc(:,t); % bias corrected gyro in b-frame

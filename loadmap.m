@@ -1,4 +1,4 @@
-function [ handle ] = loadmap( )
+function [ handle, survey ] = loadmap( )
 %loadmap Loads a map of the outdoor area from google maps
 %   Also loads the positions of the base nodes from survey data
 
@@ -21,6 +21,7 @@ anchors = num2str(Survey(:,1));
 x = -Survey(:,2); %flip the x-axis
 y = Survey(:,3);
 z = Survey(:,4);
+survey = [Survey(:,1), x, y];
 
 
 % Display, first flip the image upside down so it displays correctly

@@ -29,8 +29,8 @@ Nm = 50;    % Magnetometer sensor noise covariance 50
 Ug = 0;   % Gyro bias drift noise cov 0.01 % decrease to make bias estimate stable
 
 %   Adaptive covariance weighting scaling factor
-alpha_f = 0;          % Accel observation 20 100
-alpha_m = 0;          % Magnetometer observation 30 100
+alpha_f = 5;          % Accel observation 20 100
+alpha_m = 30;          % Magnetometer observation 30 100
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -94,12 +94,13 @@ fs_confidence = exp(alpha_f*fs_mag_error*fs_dir_error);
 %   Measurement
 zk = [ fs - Cn2s*gn_cal;      ms - Cn2s*mn_cal];  
 
+
 %   Measurement matrix
 Hk = [ Cn2s*mat_cross(gn_cal),      zeros(3,3),     zeros(3,3); 
        Cn2s*mat_cross(mn_cal),      zeros(3,3),     eye(3)]; 
 
 %   Measurement covariance
-Rk = diag([min(fs_var*ones(3,1)*fs_confidence, 1000^2);  min(Nm*ones(3,1)*ms_confidence, 100^2) ]);
+Rk = diag([min(fs_var*ones(3,1)*fs_confidence, 2000^2);  min(Nm*ones(3,1)*ms_confidence, 100^2) ]);
 %   (need to cap variance for precision of matrix)
 
 %   Run the Kalman Filter
