@@ -26,7 +26,7 @@ Exp	Type		w220 file	w315 file	WASP file	Description
 16	Static		NA		15		15		Outside the convex hull
 
 
-WASP Data Format:
+WASP Position Data csv file Format:
 1. 	8 bit overflowing sequence number
 2. 	Node ID (220)
 3. 	Valid bit
@@ -44,7 +44,7 @@ WASP Data Format:
 15. 	error (std residuals?)
 
 
-Survey Data Format:
+Alija's Survey Data Format:
 Ignore the first line, then headers are:
 1.	Node	
 2.	x
@@ -55,9 +55,10 @@ Ignore the first line, then headers are:
 
 filemapping.csv
 1.	wsd (IMU) data file
-2. 	associated WASP data file
-3. 	which col of data to use out of the WASP data file
-4-6.	vector towards the 'front' of the WASP unit on that run (for plotting only)
-7-9.	calibrated magnetometer bias for that node
+2. 	associated WASP position data csv file
+3.	associated WASP ranges data .mat file
+4. 	which col of data to use out of the WASP position data file
+5-7.	vector towards the 'front' of the WASP unit on that run (for plotting only)
+8-10.	calibrated magnetometer bias for that node
 
 

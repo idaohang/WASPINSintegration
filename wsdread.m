@@ -47,7 +47,7 @@ if nargin >= 1 && ischar(filename)
         return
     else 
          % Added so it will work when given a file name
-        parts = textscan(filename,'%s','delimiter','/');
+        parts = textscan(filename,'%s','delimiter','\\');
         parts = textscan(char(parts{1}(end)),'%s','delimiter','.');
         file = char(parts{1}(1));
     end

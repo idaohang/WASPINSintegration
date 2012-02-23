@@ -1,21 +1,21 @@
 
 %function [ r, Cn2b, timestamps_IMU, WASPloc, timestamps_WASP  ] = main( INSfile, loss_freq, loss_period )
-function [  ] = main( INSfile )
+function [  ] = main( dirpath, INSfile )
 
 % main function that runs an INS / WASP Kalman filter integration
 % Do a 'clear all' first or sometimes you will get an error
-clearvars -except INSfile loss_freq loss_period 
+clearvars -except INSfile dirpath 
 global a v r rpy Cn2b ba bg dr dv fs fsc ws wsc epsilon WASPloc timestamps_IMU...
- timestamps_WASP nS nS_filter front Sk innov ms mn_cal gn_cal Pk msc bm
+ timestamps_WASP nS nS_filter front Sk innov ms mn_cal gn_cal Pk
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %   LOADING DATA
 
 % Read imu data stored as Nx13 array of TsGxGyGzAxAyAzTxTyTzMxMyMz
-if nargin < 1
-    [imu,imu_p,filename,dirpath] = wsdread();
+if nargin == 2
+    [imu,imu_p,filename] = wsdread(char(fullfile(dirpath,INSfile)));
 else
-    [imu,imu_p,filename,dirpath] = wsdread(INSfile);
+    [imu,imu_p,filename,dirpath] = wsdread();
 end;
 
 % Map the  INS wsd file to the correct WASP file
@@ -86,7 +86,7 @@ dt_WASP = (timestamps_WASP(end)- timestamps_WASP(1))/(nS_filter-1);
 [a, v, r, rpy] = deal(zeros(3,nS+1)); % INS output
 [Cn2b] = deal(zeros(3,3,nS+1)); % INS orientation matrix
 [msc, wsc, fsc] = deal(zeros(3,nS)); % Bias corrected gyro and accel in s-frame
-[bm, ba, bg, epsilon, dv, dr] = deal(zeros(3,nS+1)); % filter error estimates
+[ba, bg, epsilon, dv, dr] = deal(zeros(3,nS+1)); % filter error estimates
 [innov, Sk] = deal(zeros(9,nS+1));       % filter residuals + std dev
 [Pk] = deal(zeros(15,nS+1));             % filter std dev
 
@@ -121,12 +121,12 @@ Cs2b = eye(3); % Assume body and sensor framed are aligned
 
 tf = 1;     % timestep for the filter
 last_t = 1; % for averaging accelerations over a WASP filter update cycle
+Pkm = [];        % State covariance matrix
 for t=1:nS  % timestep for the INS
     
     %bg(:,tf) = [0.42; 0.23; -0.1]; % manually tuned bias correction, for testing 315 circle
     
     % Apply bias corrections   
-    msc(:,t) = ms(:,t) - bm(:,t);    % bias corrected magnetometer in s-frame
     wsc(:,t) = ws(:,t) - bg(:,t);    % bias corrected gyro in s-frame
     fsc(:,t) = fs(:,t) - ba(:,t);    % bias corrected accel in s-frame
     wb = Cs2b*wsc(:,t); % bias corrected gyro in b-frame
@@ -146,26 +146,38 @@ for t=1:nS  % timestep for the INS
         if (tf > 1), dt_WASP = timestamps_WASP(tf)- timestamps_WASP(tf-1); end;
         fs_mean = mean(fsc(:,last_t:t),2); % Could do something more sophisticated here, ie. integration
         
-        [ ba_error, bg_error, dv(:,t+1), dr(:,t+1), epsilon(:,t+1), innov(1:3,t+1), Sk(1:3,t+1), Pk(:,t+1) ] ...
-            = WASPfilter( Cs2b, Cn2b(:,:,last_t)', fs_mean, dt_WASP, dr_wasp );
+        [ ba_error, bg_error, dv(:,t+1), dr(:,t+1), epsilon(:,t+1), innov(1:3,t+1), Sk(1:3,t+1), Pkm ] ...
+            = WASPfilter( Cs2b, Cn2b(:,:,last_t)', fs_mean, dt_WASP, dr_wasp, Pkm );
         
         ba(:,t+1) = ba(:,t) + ba_error;
-        bg(:,t+1) = bg(:,t) + bg_error;
-        bm(:,t+1) = bm(:,t);
+        bg(:,t+1) = bg(:,t);% + bg_error;
+        
+        % Now run the IMU filter as well
+        [ bg_error, epsilon(:,t+1), innov(4:9,t+1), Sk(4:9,t+1), Pkm(7:12,7:12)] ...
+            = IMUfilter( Cs2b, Cb2n, fsc(:,t), ms(:,t), dt, mn_cal, gn_cal, fs_var(t), Pkm_small );
+        bg(:,t+1) = bg(:,t+1) + bg_error;
+        Pk(:,t+1) = sqrt(diag(Pkm));
                 
         tf = tf + 1;        % Increment filter time step
-        t = t-1;
         last_t = t;
         
     else % No WASP update available
-              
-        [ bm_error, bg_error, epsilon(:,t+1), innov(4:9,t+1), Sk(4:9,t+1), Pk(7:12,t+1) ] ...
-            = IMUfilter( Cs2b, Cb2n, fsc(:,t), msc(:,t), dt, mn_cal, gn_cal, fs_var(t) );
-        
+
+        if isempty(Pkm)
+            Pkm_small = [];
+        else
+            Pkm_small = Pkm(7:12,7:12);
+        end;
+        [ bg_error, epsilon(:,t+1), innov(4:9,t+1), Sk(4:9,t+1), Pkm(7:12,7:12)] ...
+            = IMUfilter( Cs2b, Cb2n, fsc(:,t), ms(:,t), dt, mn_cal, gn_cal, fs_var(t), Pkm_small );
+
         ba(:,t+1) = ba(:,t);
-        bm(:,t+1) = bm(:,t) + bm_error;
         bg(:,t+1) = bg(:,t) + bg_error;
-   
+        if size(Pkm) < 15 
+            Pk(7:12,t+1) = sqrt(diag(Pkm(7:12,7:12)));
+        else
+            Pk(:,t+1) = sqrt(diag(Pkm));
+        end;    
    end;
     
 end;  

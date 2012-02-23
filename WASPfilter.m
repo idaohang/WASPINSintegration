@@ -1,5 +1,5 @@
-function [ ba, bg, dv, dr, epsilon, innov, Sk_diag, Pk_diag ]...
-    = WASPfilter( Cs2b, Cb2n, fs_mean, dt, dr_wasp )
+function [ ba, bg, dv, dr, epsilon, innov, Sk_diag, Pkm ]...
+    = WASPfilter( Cs2b, Cb2n, fs_mean, dt, dr_wasp, Pkm )
 %errorfilter Implements an error state filter
 %   outputs of the function are:
 %   ba - estimated accelerometer bias in the s-frame (in mg)
@@ -28,10 +28,10 @@ vert_err = 0.5^2; % Assume vertical movement is an error, but not much certainty
 
 %   Sensors noise covariances
 Na = 100; % Accel sensor noise cov (in mg squared) 100 % increase to put less weight on observation
-Ng = 1;   % Gyro sensor noise cov (in deg/s squared) 1 % increase to make bias estimate more stable
+Ng = 0.1;   % Gyro sensor noise cov (in deg/s squared) 1 % increase to make bias estimate more stable
 
 Ua = 1;  % Accel bias drift noise cov 30
-Ug = 0;   % Gyro bias drift noise cov 0.01 % decreas to make bias estimate stable
+Ug = 0.005;   % Gyro bias drift noise cov 0.01 % decreas to make bias estimate stable
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -57,9 +57,13 @@ Ft = [  zeros(3,3), eye(3),     zeros(3,3),     zeros(3,3),        zeros(3,3);
 Fk = expm(Ft*dt);    % Can speed this up with a lower order approximation later on
 
 %   Prior state covariance
-persistent Pkm;
-if isempty(Pkm)
+%persistent Pkm;
+if isempty(Pkm)     % No filters have run yet
     Pkm = Pinitial;
+elseif size(Pkm) < 15  % IMU filter has run
+    Pinitial(7:12,7:12) = 0;
+    Pkm(13:15,13:15) = 0;
+    Pkm = Pinitial + Pkm;    
 end;
 
 %   Process noise covariance
@@ -92,7 +96,6 @@ epsilon = xkm(7:9,:);
 bg = xkm(10:12,:);
 ba = xkm(13:15,:);
 
-Pk_diag = sqrt(diag(Pkm));
 
 end
 
