@@ -1,4 +1,4 @@
-function [c, p, file, dirpath] = wsdread(filename, arg)
+function [c, p, file, Dir] = wsdread(filename, arg)
 %% FUNCTION   [c, p] = wsdread(filename)  Read WASP INS data file
 %% ARGUMENTS: filename Input file name with extension .wsd
 %%            arg      Extra argument

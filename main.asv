@@ -1,6 +1,6 @@
 
 %function [ r, Cn2b, timestamps_IMU, WASPloc, timestamps_WASP  ] = main( INSfile, loss_freq, loss_period )
-function [  ] = mainRANGE( INSfile )
+function [  ] = main( INSfile )
 
 % main function that runs an INS / WASP Kalman filter integration
 % Do a 'clear all' first or sometimes you will get an error
@@ -13,22 +13,34 @@ global a v r rpy Cn2b ba bg dr dv fs fsc ws wsc epsilon WASPloc timestamps_IMU..
 
 % Read imu data stored as Nx13 array of TsGxGyGzAxAyAzTxTyTzMxMyMz
 if nargin < 1
-    [imu,imu_p,filename] = wsdread();
+    [imu,imu_p,filename,dirpath] = wsdread();
 else
-    [imu,imu_p,filename] = wsdread(INSfile);
+    [imu,imu_p,filename,dirpath] = wsdread(INSfile);
 end;
 
 % Map the  INS wsd file to the correct WASP file
-mapfile = fopen('WASP_INS_Data/20111220/filemapping.csv'); 
-filemapping = textscan(mapfile,'%s %s %d %f %f %f %f %f %f', 'delimiter',',');
+mapfile = fopen(fullfile(dirpath,'filemapping.csv')); 
+filemapping = textscan(mapfile,'%s %s %s %d %f %f %f %f %f %f', 'delimiter',',');
 fclose(mapfile); 
 index = find(ismember(filemapping{1}, filename)==1);
-WASPdatafile = strcat('WASP_INS_Data/20111220/',filemapping{2}(index));
-col = filemapping{3}(index);
-front = [filemapping{4}(index); filemapping{5}(index); filemapping{6}(index)];
-ms_bias = [filemapping{7}(index); filemapping{8}(index); filemapping{9}(index)];
+WASPdatafile = fullfile(dirpath,char(filemapping{2}(index)));
+col = filemapping{4}(index); % Which column to use out of the posWASP csv files
+front = [filemapping{5}(index); filemapping{6}(index); filemapping{7}(index)];
+ms_bias = [filemapping{8}(index); filemapping{9}(index); filemapping{10}(index)];
 
-% Load the WASP data in format "TsXposYpos"
+% Load the survey file
+survey = csvread(fullfile(dirpath,'survey.csv'));
+
+% Load the range data
+WASPrangefile =  fullfile(dirpath,char(filemapping{3}(index)));
+R = load(WASPrangefile);
+node = strtok(filename,'-');    
+node = str2double(node(2:end));
+ranges = (squeeze(R.RangeData(:,node==R.NodeList,:)) + squeeze(R.RangeData(node==R.NodeList,:,:))) ./2 ;
+
+
+
+% Load the WASP position data in format "TsXposYpos"
 WASPdata = csvread(WASPdatafile{1},0,col);
 WASPdata(:,col+1:size(WASPdata,2)) = []; % drop fields not needed
 WASPdata(1:4,:) = []; % drop first 4 obs
@@ -110,7 +122,7 @@ for t=1:nS  % timestep for the INS
     %bg(:,tf) = [0.42; 0.23; -0.1]; % manually tuned bias correction, for testing 315 circle
     
     % Apply bias corrections   
-    msc(:,t) = ms(:,t) - bm(:,t);    % bias corrected gyro in s-frame
+    msc(:,t) = ms(:,t) - bm(:,t);    % bias corrected magnetometer in s-frame
     wsc(:,t) = ws(:,t) - bg(:,t);    % bias corrected gyro in s-frame
     fsc(:,t) = fs(:,t) - ba(:,t);    % bias corrected accel in s-frame
     wb = Cs2b*wsc(:,t); % bias corrected gyro in b-frame
