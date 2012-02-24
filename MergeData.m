@@ -14,7 +14,7 @@ function MergeData()
 clc
 
 addpath(genpath('Utils'));
-BaseDataDir = 'Data/';
+BaseDataDir = '';
 
 DIM = 2;                                  % two or three dimensional localization
 REQUIRE_MAC_ID_TO_NODE_ID_CONVERSION = 1; % 1 - need conversion from MAC_ID to Node_ID, 0 - otherwise
@@ -23,10 +23,10 @@ AIS_OR_ADHOC = 0;                         % 1 - data in AIS mode, hence expects 
 % % Marsfield Jan 22, 2012
 CollectionNodes = 1;
 SelectDataSet = 1;
-SurveyFileName = [BaseDataDir 'Marsfield_2011_12_20/Survey_20Dec2011.csv'];
+SurveyFileName = [BaseDataDir 'WASP_INS_data/20120222/survey.csv'];
 NodeDelayFileName = 'NodeDelay.csv';
-FileNames = {[BaseDataDir 'Marsfield_2011_12_20/WASP20Dec' num2str(SelectDataSet) '.wtd']};
-RangeDataFileName = [BaseDataDir 'Marsfield_2011_12_20/WASP20Dec2011_rd_' num2str(SelectDataSet)];
+FileNames = {[BaseDataDir 'WASP_INS_data/20120222/WASP22Feb' num2str(SelectDataSet) '.wtd']};
+RangeDataFileName = [BaseDataDir 'WASP_INS_data/20120222/WASP20Dec2011_rd_' num2str(SelectDataSet)];
 NodesToRemove = [];
 
 
